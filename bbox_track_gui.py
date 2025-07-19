@@ -368,9 +368,11 @@ class InteractiveBBoxItem(QGraphicsRectItem):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionHasChanged:
-            # Called after a move
-            self.bboxChanged.emit(self.bbox_obj.instance_id, 
-                                self.rect().translated(value))
+            # Called after a move - notify main window directly
+            if self.main_window:
+                self.main_window.on_bbox_changed(self.bbox_obj.instance_id, self.rect().translated(value))
+            elif self.parent_canvas and hasattr(self.parent_canvas, 'main_window'):
+                self.parent_canvas.main_window.on_bbox_changed(self.bbox_obj.instance_id, self.rect().translated(value))
         return super().itemChange(change, value)
 
     def get_handle_rects(self):
