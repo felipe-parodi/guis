@@ -4,6 +4,8 @@
 ## Specific
 v1/
 
+uv.lock
+
 ## CV
 *.json
 *.png
