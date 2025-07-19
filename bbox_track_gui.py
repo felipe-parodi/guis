@@ -549,7 +549,7 @@ class TrackingQCWindow(QMainWindow):
         self.video_list = []
         self.selected_bbox_instance_id = None
         self.downsampling = False
-        self.confidence_threshold = 0.0
+        self.confidence_threshold = 0.5
         self.show_track_trails = False
         self.show_trajectories = False
         self.show_heatmap = False
@@ -664,9 +664,11 @@ class TrackingQCWindow(QMainWindow):
         conf_layout = QHBoxLayout()
         self.conf_slider = QSlider(Qt.Horizontal)
         self.conf_slider.setRange(0, 100)
-        self.conf_slider.setValue(0)
+        self.conf_slider.setValue(50)
+        # Ensure we're connecting to the correct method
+        self.conf_slider.valueChanged.disconnect()  # Clear any existing connections
         self.conf_slider.valueChanged.connect(self.update_confidence_threshold)
-        self.conf_label = QLabel("0.00")
+        self.conf_label = QLabel("0.50")
         conf_layout.addWidget(self.conf_slider)
         conf_layout.addWidget(self.conf_label)
         sidebar.addLayout(conf_layout)
@@ -1223,7 +1225,7 @@ class TrackingQCWindow(QMainWindow):
     
     def update_confidence_threshold(self, value):
         """Update confidence threshold for filtering."""
-        print(f"DEBUG: Confidence threshold changed to {value}")
+        print(f"DEBUG: CONFIDENCE SLIDER - threshold changed to {value}")
         self.confidence_threshold = value / 100.0
         self.conf_label.setText(f"{self.confidence_threshold:.2f}")
         self.force_redraw_current_frame()
