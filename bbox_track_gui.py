@@ -279,7 +279,7 @@ class DetectionTimeline(QSlider):
             painter.drawLine(int(x), groove_rect.top(), int(x), groove_rect.bottom())
 
 
-class InteractiveBBoxItem(QGraphicsRectItem):
+class InteractiveBBoxItem(QGraphicsRectItem, QObject):
     """Enhanced bbox item with better visual feedback."""
     bboxChanged = pyqtSignal(int, QRectF)
     bboxSelected = pyqtSignal(int)
@@ -287,7 +287,8 @@ class InteractiveBBoxItem(QGraphicsRectItem):
     HandleSize = 8
     
     def __init__(self, rect: QRectF, bbox_obj: BBox):
-        super().__init__(rect)
+        QGraphicsRectItem.__init__(self, rect)
+        QObject.__init__(self)
         self.bbox_obj = bbox_obj
         self.handles = {}
         self.handle_positions = {

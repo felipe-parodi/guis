@@ -1,4 +1,4 @@
-name: freeoT
+name: guis
 channels:
   - conda-forge
   - defaults
