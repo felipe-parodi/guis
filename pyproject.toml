@@ -1,5 +1,5 @@
 [project]
-name = "freeoT"
+name = "guis"
 version = "1.0.0"
 description = "Video bbox-track editor for rapid bbox editing and quality control"
 requires-python = ">=3.8"
