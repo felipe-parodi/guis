@@ -665,8 +665,7 @@ class TrackingQCWindow(QMainWindow):
         self.conf_slider = QSlider(Qt.Horizontal)
         self.conf_slider.setRange(0, 100)
         self.conf_slider.setValue(50)
-        # Ensure we're connecting to the correct method
-        self.conf_slider.valueChanged.disconnect()  # Clear any existing connections
+        # Connect to the confidence threshold method
         self.conf_slider.valueChanged.connect(self.update_confidence_threshold)
         self.conf_label = QLabel("0.50")
         conf_layout.addWidget(self.conf_slider)
