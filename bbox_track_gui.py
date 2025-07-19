@@ -288,6 +288,10 @@ class InteractiveBBoxItem(QGraphicsRectItem):
         super().__init__(rect)
         self.bbox_obj = bbox_obj
         self.parent_canvas = parent_canvas
+        # Store reference to main window
+        self.main_window = None
+        if parent_canvas and hasattr(parent_canvas, 'main_window'):
+            self.main_window = parent_canvas.main_window
         self.handles = {}
         self.handle_positions = {
             0: "TopLeft", 
@@ -341,8 +345,10 @@ class InteractiveBBoxItem(QGraphicsRectItem):
         self.selected_handle = self.get_handle_at(event.pos())
         self.mouse_press_pos = event.pos()
         self.mouse_press_rect = self.rect()
-        if self.parent_canvas:
-            self.parent_canvas.parent().on_bbox_selected(self.bbox_obj.instance_id)
+        if self.main_window:
+            self.main_window.on_bbox_selected(self.bbox_obj.instance_id)
+        elif self.parent_canvas and hasattr(self.parent_canvas, 'main_window'):
+            self.parent_canvas.main_window.on_bbox_selected(self.bbox_obj.instance_id)
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
@@ -355,14 +361,10 @@ class InteractiveBBoxItem(QGraphicsRectItem):
         self.selected_handle = None
         super().mouseReleaseEvent(event)
         # Finalize change
-        if self.parent_canvas:
-            try:
-                print(f"DEBUG: Calling on_bbox_changed for instance {self.bbox_obj.instance_id}")
-                print(f"DEBUG: parent_canvas type: {type(self.parent_canvas)}")
-                print(f"DEBUG: parent_canvas.parent() type: {type(self.parent_canvas.parent())}")
-                self.parent_canvas.parent().on_bbox_changed(self.bbox_obj.instance_id, self.rect())
-            except Exception as e:
-                print(f"DEBUG: Error calling on_bbox_changed: {e}")
+        if self.main_window:
+            self.main_window.on_bbox_changed(self.bbox_obj.instance_id, self.rect())
+        elif self.parent_canvas and hasattr(self.parent_canvas, 'main_window'):
+            self.parent_canvas.main_window.on_bbox_changed(self.bbox_obj.instance_id, self.rect())
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionHasChanged:
@@ -439,6 +441,7 @@ class VideoCanvas(QGraphicsView):
         
         self.is_adding_bbox = False
         self.visualization_items = []  # Track visualization overlays
+        self.main_window = None  # Will be set by parent
 
     def display_frame(self, frame: np.ndarray):
         height, width = frame.shape[:2]
@@ -599,6 +602,7 @@ class TrackingQCWindow(QMainWindow):
         # Main content with enhanced sidebar
         content_layout = QHBoxLayout()
         self.video_canvas = VideoCanvas()
+        self.video_canvas.main_window = self  # Set reference to main window
         content_layout.addWidget(self.video_canvas, 3)
 
         # Enhanced right sidebar
