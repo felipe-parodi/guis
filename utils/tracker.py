@@ -65,13 +65,14 @@ class ShortTermTracker:
             
         if tracker_type not in self.TRACKER_TYPES:
             # Fallback to first available tracker
+            original_tracker = tracker_type
             available_trackers = list(self.TRACKER_TYPES.keys())
             if available_trackers:
                 tracker_type = available_trackers[0]
-                print(f"Warning: Requested tracker '{tracker_type}' not available. "
+                print(f"Warning: Requested tracker '{original_tracker}' not available. "
                       f"Using '{tracker_type}' instead.")
             else:
-                raise ValueError(f"Unknown tracker type: {tracker_type}. "
+                raise ValueError(f"Unknown tracker type: {original_tracker}. "
                                f"Available: {list(self.TRACKER_TYPES.keys())}")
         
         self.tracker_type = tracker_type
