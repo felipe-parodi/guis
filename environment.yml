@@ -1,0 +1,12 @@
+name: freeoT
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - pandas
+  - pip:
+    - PyQt5
+    - opencv-contrib-python

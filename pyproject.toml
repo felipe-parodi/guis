@@ -1,0 +1,22 @@
+[project]
+name = "freeoT"
+version = "1.0.0"
+description = "Video bbox-track editor for rapid bbox editing and quality control"
+requires-python = ">=3.8"
+dependencies = [
+    "PyQt5>=5.15.0",
+    "opencv-contrib-python>=4.5.0",
+    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=6.0",
+    "black>=21.0",
+    "ruff>=0.0.280",
+]
