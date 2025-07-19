@@ -279,17 +279,15 @@ class DetectionTimeline(QSlider):
             painter.drawLine(int(x), groove_rect.top(), int(x), groove_rect.bottom())
 
 
-class InteractiveBBoxItem(QGraphicsRectItem, QObject):
+class InteractiveBBoxItem(QGraphicsRectItem):
     """Enhanced bbox item with better visual feedback."""
-    bboxChanged = pyqtSignal(int, QRectF)
-    bboxSelected = pyqtSignal(int)
     
     HandleSize = 8
     
-    def __init__(self, rect: QRectF, bbox_obj: BBox):
-        QGraphicsRectItem.__init__(self, rect)
-        QObject.__init__(self)
+    def __init__(self, rect: QRectF, bbox_obj: BBox, parent_canvas=None):
+        super().__init__(rect)
         self.bbox_obj = bbox_obj
+        self.parent_canvas = parent_canvas
         self.handles = {}
         self.handle_positions = {
             0: "TopLeft", 
@@ -343,7 +341,8 @@ class InteractiveBBoxItem(QGraphicsRectItem, QObject):
         self.selected_handle = self.get_handle_at(event.pos())
         self.mouse_press_pos = event.pos()
         self.mouse_press_rect = self.rect()
-        self.bboxSelected.emit(self.bbox_obj.instance_id)
+        if self.parent_canvas:
+            self.parent_canvas.parent().on_bbox_selected(self.bbox_obj.instance_id)
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
@@ -356,7 +355,14 @@ class InteractiveBBoxItem(QGraphicsRectItem, QObject):
         self.selected_handle = None
         super().mouseReleaseEvent(event)
         # Finalize change
-        self.bboxChanged.emit(self.bbox_obj.instance_id, self.rect())
+        if self.parent_canvas:
+            try:
+                print(f"DEBUG: Calling on_bbox_changed for instance {self.bbox_obj.instance_id}")
+                print(f"DEBUG: parent_canvas type: {type(self.parent_canvas)}")
+                print(f"DEBUG: parent_canvas.parent() type: {type(self.parent_canvas.parent())}")
+                self.parent_canvas.parent().on_bbox_changed(self.bbox_obj.instance_id, self.rect())
+            except Exception as e:
+                print(f"DEBUG: Error calling on_bbox_changed: {e}")
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionHasChanged:
@@ -487,10 +493,8 @@ class VideoCanvas(QGraphicsView):
                           (bbox.x2 - bbox.x1) * scale.x(), 
                           (bbox.y2 - bbox.y1) * scale.y())
             
-            item = InteractiveBBoxItem(rect, bbox)
+            item = InteractiveBBoxItem(rect, bbox, self)
             item.setSelected(bbox.instance_id == selected_instance_id)
-            item.bboxChanged.connect(self.parent().on_bbox_changed)
-            item.bboxSelected.connect(self.parent().on_bbox_selected)
             item.setOpacity(opacity)
             
             # Check if track is suspicious (for validation highlighting)
@@ -1215,6 +1219,7 @@ class TrackingQCWindow(QMainWindow):
     
     def update_confidence_threshold(self, value):
         """Update confidence threshold for filtering."""
+        print(f"DEBUG: Confidence threshold changed to {value}")
         self.confidence_threshold = value / 100.0
         self.conf_label.setText(f"{self.confidence_threshold:.2f}")
         self.force_redraw_current_frame()
@@ -1310,6 +1315,7 @@ class TrackingQCWindow(QMainWindow):
 
     def seek_from_slider(self, frame_num: int):
         """Handle timeline slider movement."""
+        print(f"DEBUG: Timeline slider seeking to frame {frame_num}")
         if self.timeline.isSliderDown():
             self.pending_seek_frame = frame_num
             if not self.scrub_timer.isActive():

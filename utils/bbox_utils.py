@@ -105,7 +105,17 @@ class BBoxManager:
                 self.bbox_data[frame_id] = []
                 for inst in frame_obj.get('instances', []):
                     bbox = inst.get('bbox')
-                    if not bbox or len(bbox) < 4:
+                    if not bbox:
+                        continue
+                    
+                    # Handle nested bbox format [[x1,y1,x2,y2]] or flat [x1,y1,x2,y2]
+                    if isinstance(bbox[0], list) and len(bbox[0]) >= 4:
+                        # Nested format: [[x1,y1,x2,y2]]
+                        bbox_coords = bbox[0]
+                    elif len(bbox) >= 4:
+                        # Flat format: [x1,y1,x2,y2]
+                        bbox_coords = bbox
+                    else:
                         continue
                     
                     track_id = inst.get('track_id', inst.get('instance_id'))
@@ -115,8 +125,8 @@ class BBoxManager:
                     confidence = inst.get('confidence', inst.get('score'))
 
                     new_bbox = BBox(
-                        x1=float(bbox[0]), y1=float(bbox[1]),
-                        x2=float(bbox[2]), y2=float(bbox[3]),
+                        x1=float(bbox_coords[0]), y1=float(bbox_coords[1]),
+                        x2=float(bbox_coords[2]), y2=float(bbox_coords[3]),
                         track_id=int(track_id) if track_id is not None else None,
                         confidence=float(confidence) if confidence is not None else None
                     )
