@@ -612,7 +612,7 @@ class TrackingQCWindow(QMainWindow):
         sidebar.addWidget(QLabel("Playback Controls"))
         self.play_btn = QPushButton("Play (Space)")
         self.speed_combo = QComboBox()
-        self.speed_combo.addItems(["0.25x", "0.5x", "1x", "2x", "4x"])
+        self.speed_combo.addItems(["0.25x", "0.5x", "1x", "2x", "4x", "8x", "16x"])
         self.speed_combo.setCurrentIndex(2)
         
         playback_layout = QHBoxLayout()
@@ -634,7 +634,8 @@ class TrackingQCWindow(QMainWindow):
         id_layout.addWidget(QLabel("Assign Track ID:"), 0, 0, 1, 3)
         for i in range(1, 10):
             btn = QPushButton(str(i))
-            btn.clicked.connect(lambda _, tid=i: self.assign_track_id(tid))
+            btn.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
+            btn.clicked.connect(lambda checked, tid=i: self.assign_track_id(tid))
             id_layout.addWidget(btn, (i-1)//3 + 1, (i-1)%3)
         sidebar.addLayout(id_layout)
 
@@ -656,6 +657,7 @@ class TrackingQCWindow(QMainWindow):
         tracker_layout.addWidget(QLabel("Tracker:"))
         self.tracker_combo = QComboBox()
         self.tracker_combo.addItems(["csrt", "kcf", "mosse", "mil"])
+        self.tracker_combo.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         tracker_layout.addWidget(self.tracker_combo)
         sidebar.addLayout(tracker_layout)
         
@@ -665,6 +667,7 @@ class TrackingQCWindow(QMainWindow):
         self.conf_slider = QSlider(Qt.Horizontal)
         self.conf_slider.setRange(0, 100)
         self.conf_slider.setValue(50)
+        self.conf_slider.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         # Connect to the confidence threshold method
         self.conf_slider.valueChanged.connect(self.update_confidence_threshold)
         self.conf_label = QLabel("0.50")
@@ -675,10 +678,13 @@ class TrackingQCWindow(QMainWindow):
         # Visualization options
         sidebar.addWidget(QLabel("Visualization:"))
         self.track_trails_cb = QCheckBox("Show Track Trails")
+        self.track_trails_cb.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         self.track_trails_cb.toggled.connect(self.toggle_track_trails)
         self.trajectories_cb = QCheckBox("Show Trajectories")
+        self.trajectories_cb.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         self.trajectories_cb.toggled.connect(self.toggle_trajectories)
         self.heatmap_cb = QCheckBox("Show Heatmap")
+        self.heatmap_cb.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         self.heatmap_cb.toggled.connect(self.toggle_heatmap)
         
         sidebar.addWidget(self.track_trails_cb)
@@ -688,6 +694,7 @@ class TrackingQCWindow(QMainWindow):
         # Auto-save and performance options
         sidebar.addWidget(QLabel("Options:"))
         self.auto_save_cb = QCheckBox("Auto-save")
+        self.auto_save_cb.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         self.auto_save_cb.toggled.connect(self.toggle_auto_save)
         sidebar.addWidget(self.auto_save_cb)
         
@@ -697,6 +704,7 @@ class TrackingQCWindow(QMainWindow):
         self.label_fps_spin = QSpinBox()
         self.label_fps_spin.setRange(0, 60)
         self.label_fps_spin.setValue(15)
+        self.label_fps_spin.setFocusPolicy(Qt.NoFocus)  # Prevent focus capture
         self.label_fps_spin.valueChanged.connect(self.update_label_threshold)
         label_layout.addWidget(self.label_fps_spin)
         sidebar.addLayout(label_layout)
@@ -735,6 +743,8 @@ class TrackingQCWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key_Space), self, self.toggle_playback)
         QShortcut(QKeySequence(Qt.Key_Left), self, self.prev_frame)
         QShortcut(QKeySequence(Qt.Key_Right), self, self.next_frame)
+        QShortcut(QKeySequence(Qt.Key_Up), self, self.prev_frame)  # Up arrow = prev frame
+        QShortcut(QKeySequence(Qt.Key_Down), self, self.next_frame)  # Down arrow = next frame
         QShortcut(QKeySequence(Qt.Key_Delete), self, self.delete_selected_bbox)
         QShortcut(QKeySequence("A"), self, self.add_bbox_btn.toggle)
         QShortcut(QKeySequence("Ctrl+S"), self, self.save_changes)

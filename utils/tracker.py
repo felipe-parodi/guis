@@ -63,8 +63,8 @@ class ShortTermTracker:
         if not self.TRACKER_TYPES:
             raise RuntimeError("No OpenCV trackers available. Please install opencv-contrib-python.")
             
+        # Test if the requested tracker actually works
         if tracker_type not in self.TRACKER_TYPES:
-            # Fallback to first available tracker
             original_tracker = tracker_type
             available_trackers = list(self.TRACKER_TYPES.keys())
             if available_trackers:
@@ -75,7 +75,24 @@ class ShortTermTracker:
                 raise ValueError(f"Unknown tracker type: {original_tracker}. "
                                f"Available: {list(self.TRACKER_TYPES.keys())}")
         
-        self.tracker_type = tracker_type
+        # Test tracker creation before setting it
+        working_tracker = None
+        for test_type in [tracker_type] + [t for t in self.TRACKER_TYPES.keys() if t != tracker_type]:
+            try:
+                test_tracker = self.TRACKER_TYPES[test_type]()
+                if test_tracker is not None:
+                    working_tracker = test_type
+                    if test_type != tracker_type:
+                        print(f"Warning: '{tracker_type}' failed to initialize. Using '{test_type}' instead.")
+                    break
+            except Exception as e:
+                print(f"Debug: Tracker '{test_type}' failed to create: {e}")
+                continue
+        
+        if working_tracker is None:
+            raise RuntimeError("No working OpenCV trackers found. All tracker types failed to initialize.")
+        
+        self.tracker_type = working_tracker
         self.tracker = None
         self.is_initialized = False
         
@@ -90,28 +107,51 @@ class ShortTermTracker:
         Returns:
             True if initialization successful
         """
-        # Create new tracker instance
-        self.tracker = self.TRACKER_TYPES[self.tracker_type]()
-        
-        # Handle case where tracker creation failed
-        if self.tracker is None:
-            print(f"Warning: Failed to create {self.tracker_type} tracker")
-            self.is_initialized = False
-            return False
-        
-        # Convert bbox to OpenCV format (x, y, width, height)
-        cv_bbox = (
-            int(bbox.x1), 
-            int(bbox.y1), 
-            int(bbox.width), 
-            int(bbox.height)
-        )
-        
-        # Initialize tracker
         try:
-            self.is_initialized = self.tracker.init(frame, cv_bbox)
+            # Create new tracker instance with error handling
+            self.tracker = self.TRACKER_TYPES[self.tracker_type]()
+            
+            # Handle case where tracker creation failed
+            if self.tracker is None:
+                print(f"Warning: Failed to create {self.tracker_type} tracker")
+                self.is_initialized = False
+                return False
+            
+            # Validate bbox coordinates
+            if bbox.width <= 0 or bbox.height <= 0:
+                print(f"Warning: Invalid bbox dimensions: {bbox.width}x{bbox.height}")
+                self.is_initialized = False
+                return False
+            
+            # Convert bbox to OpenCV format (x, y, width, height)
+            cv_bbox = (
+                max(0, int(bbox.x1)), 
+                max(0, int(bbox.y1)), 
+                max(1, int(bbox.width)), 
+                max(1, int(bbox.height))
+            )
+            
+            # Ensure bbox is within frame boundaries
+            h, w = frame.shape[:2]
+            if cv_bbox[0] >= w or cv_bbox[1] >= h:
+                print(f"Warning: Bbox outside frame boundaries: {cv_bbox} vs {w}x{h}")
+                self.is_initialized = False
+                return False
+            
+            # Initialize tracker with comprehensive error handling
+            try:
+                self.is_initialized = self.tracker.init(frame, cv_bbox)
+                if not self.is_initialized:
+                    print(f"Warning: Tracker '{self.tracker_type}' init() returned False")
+            except cv2.error as e:
+                print(f"Warning: OpenCV error during tracker initialization: {e}")
+                self.is_initialized = False
+            except Exception as e:
+                print(f"Warning: Unexpected error during tracker initialization: {e}")
+                self.is_initialized = False
+                
         except Exception as e:
-            print(f"Warning: Tracker initialization failed: {e}")
+            print(f"Warning: Failed to create tracker '{self.tracker_type}': {e}")
             self.is_initialized = False
             
         return self.is_initialized
@@ -126,25 +166,48 @@ class ShortTermTracker:
         Returns:
             Updated BBox if tracking successful, None otherwise
         """
-        if not self.is_initialized:
+        if not self.is_initialized or self.tracker is None:
             return None
             
-        # Update tracker
-        success, cv_bbox = self.tracker.update(frame)
-        
-        if not success:
+        try:
+            # Update tracker with error handling
+            success, cv_bbox = self.tracker.update(frame)
+            
+            if not success:
+                print(f"Debug: Tracker '{self.tracker_type}' update returned False")
+                self.is_initialized = False
+                return None
+            
+            # Validate returned bbox
+            if len(cv_bbox) != 4:
+                print(f"Warning: Invalid bbox format returned: {cv_bbox}")
+                self.is_initialized = False
+                return None
+            
+            x, y, w, h = cv_bbox
+            
+            # Validate bbox values
+            if w <= 0 or h <= 0 or x < 0 or y < 0:
+                print(f"Warning: Invalid bbox values: x={x}, y={y}, w={w}, h={h}")
+                self.is_initialized = False
+                return None
+            
+            return BBox(
+                x1=float(x),
+                y1=float(y),
+                x2=float(x + w),
+                y2=float(y + h),
+                confidence=0.95  # High confidence for manual tracking
+            )
+            
+        except cv2.error as e:
+            print(f"Warning: OpenCV error during tracking update: {e}")
             self.is_initialized = False
             return None
-        
-        # Convert back to BBox format
-        x, y, w, h = cv_bbox
-        return BBox(
-            x1=x,
-            y1=y,
-            x2=x + w,
-            y2=y + h,
-            confidence=0.95  # High confidence for manual tracking
-        )
+        except Exception as e:
+            print(f"Warning: Unexpected error during tracking update: {e}")
+            self.is_initialized = False
+            return None
     
     def reset(self):
         """Reset tracker to uninitialized state."""
